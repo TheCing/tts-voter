@@ -1,0 +1,529 @@
+:root {
+  --primary: #9146ff;
+  --secondary: #772ce8;
+  --dark: #0e0e10;
+  --light: #efeff1;
+  --border-radius: 10px;
+  --component-border: 3px solid var(--secondary);
+  --component-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  background-color: var(--dark);
+  color: var(--light);
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Main app container to exactly match viewport height */
+#root {
+  height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Split layout for main app */
+.container {
+  max-width: 1200px;
+  height: 100%;
+  margin: 0 auto;
+  display: flex;
+  gap: 20px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.left-column,
+.right-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-height: 100%;
+  overflow-y: auto; /* Allow scrolling when content overflows */
+  box-sizing: border-box;
+  min-width: 0; /* Prevent flex items from overflowing */
+  padding-right: 10px; /* Add padding for scrollbar */
+}
+
+/* Add some bottom space to ensure last element is fully visible */
+.left-column:after {
+  content: "";
+  display: block;
+  height: 20px;
+  width: 100%;
+}
+
+/* Add scrollbar styling for better visibility */
+.left-column::-webkit-scrollbar {
+  width: 8px;
+}
+
+.left-column::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.left-column::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.left-column::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Component Module Base Styles */
+.component-module {
+  position: relative;
+  background-color: rgba(14, 14, 16, 0.9);
+  border: var(--component-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--component-shadow);
+  padding: 20px;
+  padding-top: 25px; /* Extra padding at top to accommodate namecard */
+  margin-bottom: 0;
+  margin-top: 15px; /* Consistent top margin for namecards */
+  backdrop-filter: blur(5px);
+  overflow: visible; /* Allow content (namecard) to overflow */
+  z-index: 1;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* Only set overflow for the content area, not the entire component */
+.component-content {
+  overflow-y: auto;
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+  max-height: 100%;
+  width: 100%;
+  box-sizing: border-box; /* Include padding in width calculation */
+  padding: 0;
+}
+
+.namecard {
+  position: absolute;
+  top: 0; /* Position at the border line */
+  left: 20px;
+  transform: translateY(
+    -50%
+  ); /* Move up by half its height to center on border */
+  background-color: var(--primary);
+  color: var(--light);
+  padding: 5px 15px;
+  border-radius: 30px;
+  font-weight: bold;
+  font-size: 14px;
+  box-shadow: var(--component-shadow);
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Header Component */
+header.component-module {
+  text-align: center;
+  padding: 20px;
+  min-height: 40px; /* Ensure header has minimum height */
+  flex: 0 0 auto; /* Prevent header from growing */
+}
+
+h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+/* Config Panel Component */
+.config-panel.component-module {
+  padding: 20px;
+  padding-top: 25px;
+  flex: 1 0 auto; /* Allow config panel to grow but not shrink */
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.config-panel .component-content {
+  padding-right: 5px; /* Add a bit of padding for scrollbar space */
+}
+
+.form-group {
+  margin-bottom: 15px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid var(--secondary);
+  border-radius: 4px;
+  background-color: var(--dark);
+  color: var(--light);
+  box-sizing: border-box;
+}
+
+button {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button:hover {
+  background-color: var(--secondary);
+}
+
+.button-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap; /* Allow buttons to wrap on small screens */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Connection Status Component */
+.status.component-module {
+  padding: 15px;
+  text-align: center;
+  flex: 0 0 auto; /* Prevent status from growing */
+  min-height: 20px; /* Ensure status has minimum height */
+}
+
+.status.connected {
+  border-color: #4caf50;
+}
+
+.status.disconnected {
+  border-color: #f44336;
+}
+
+.status-indicator {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.status.connected .status-indicator {
+  background-color: #4caf50;
+}
+
+.status.disconnected .status-indicator {
+  background-color: #f44336;
+}
+
+/* Message Board Component - special handling for scrollable content */
+.messages-container.component-module {
+  padding: 20px;
+  padding-top: 25px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.messages-content {
+  overflow-y: auto;
+  flex: 1;
+}
+
+/* Message Component */
+.message.component-module {
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  background-color: rgba(255, 255, 255, 0.1);
+  display: flex;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.message-content-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.message-body {
+  margin-bottom: 8px;
+}
+
+.vote-container {
+  display: flex;
+  align-items: center;
+  margin-top: 5px;
+}
+
+.message .username {
+  font-weight: bold;
+  margin-right: 10px;
+  color: #ff79c6;
+}
+
+.message .content {
+  word-break: break-word;
+}
+
+.message .timestamp {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}
+
+.vote-button {
+  background-color: transparent;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 5px;
+  border-radius: 50%;
+  height: 28px;
+  width: 28px;
+  transition: background-color 0.2s;
+}
+
+.vote-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.vote-count {
+  display: inline-block;
+  min-width: 20px;
+  text-align: center;
+  background-color: var(--primary);
+  border-radius: 15px;
+  padding: 2px 8px;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* Making components look good when used independently */
+.standalone-component {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  background-color: transparent;
+}
+
+/* Component-specific height adjustments for OBS */
+.header-standalone {
+  padding-bottom: 10px;
+}
+
+.config-standalone {
+  height: auto;
+}
+
+.status-standalone {
+  padding: 10px 20px;
+}
+
+.messageboard-standalone {
+  height: 500px;
+}
+
+/* Responsive styling for different sizes */
+@media (max-width: 900px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .left-column,
+  .right-column {
+    max-height: none;
+  }
+
+  .messages-container.component-module {
+    height: 400px;
+  }
+}
+
+@media (max-width: 500px) {
+  .component-module {
+    padding: 15px;
+  }
+
+  h1 {
+    font-size: 20px;
+  }
+
+  .message {
+    flex-direction: column;
+  }
+
+  .message .timestamp {
+    margin-top: 5px;
+  }
+}
+
+/* Settings Component */
+.settings.component-module {
+  padding: 20px;
+  padding-top: 25px;
+  flex: 0 0 auto;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* iOS Style Toggle Switch */
+.toggle-switch-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  width: 100%;
+}
+
+.toggle-switch-label {
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+  margin: 0;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.2);
+  transition: 0.4s;
+  border-radius: 34px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 24px;
+  width: 24px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  transition: 0.4s;
+  border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+  background-color: var(--primary);
+}
+
+input:focus + .toggle-slider {
+  box-shadow: 0 0 1px var(--primary);
+}
+
+input:checked + .toggle-slider:before {
+  transform: translateX(22px);
+}
+
+/* Debug Panel Component */
+.debug-panel.component-module {
+  padding: 20px;
+  padding-top: 25px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 200px;
+  max-height: 400px;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.debug-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.debug-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: var(--primary);
+}
+
+.debug-count {
+  font-size: 12px;
+  background-color: rgba(255, 255, 255, 0.2);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.debug-content {
+  overflow-y: auto;
+  flex: 1;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.debug-item {
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.debug-time {
+  color: rgba(255, 255, 255, 0.6);
+  margin-right: 8px;
+  font-size: 11px;
+}
+
+.debug-message {
+  word-break: break-word;
+}
+
+.debug-empty {
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  padding: 20px;
+}

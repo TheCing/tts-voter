@@ -1,0 +1,322 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+import tmi from "tmi.js";
+
+const useTwitchChat = () => {
+  const [channel, setChannel] = useState("");
+  const [trackingMode, setTrackingMode] = useState("user");
+  const [username, setUsername] = useState("");
+  const [connected, setConnected] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [votes, setVotes] = useState({});
+  const [client, setClient] = useState(null);
+  const [debug, setDebug] = useState([]); // Debug log array
+  const shouldAutoConnect = useRef(false);
+
+  // Add message to debug log
+  const addDebugMessage = useCallback((message) => {
+    // Only log in development environment
+    if (import.meta.env.DEV) {
+      // Adding timestamp and styling to console logs
+      const timestamp = new Date().toLocaleTimeString();
+      console.log(
+        `%c${timestamp} %c[DEBUG] %c${message}`,
+        "color: gray",
+        "color: #9146ff; font-weight: bold",
+        "color: white"
+      );
+
+      setDebug((prev) => [
+        ...prev,
+        { time: new Date().toISOString(), message },
+      ]);
+    }
+  }, []);
+
+  // Check URL parameters for OBS browser source config
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    // If channel parameter exists, set it
+    const channelParam = params.get("channel");
+    if (channelParam) {
+      setChannel(channelParam);
+    }
+
+    // If tracking mode parameter exists, set it
+    const trackingParam = params.get("tracking");
+    if (trackingParam && ["user", "cheer"].includes(trackingParam)) {
+      setTrackingMode(trackingParam);
+      addDebugMessage(`Set tracking mode from URL: ${trackingParam}`);
+    }
+
+    // If username parameter exists, set it
+    const usernameParam = params.get("username");
+    if (usernameParam) {
+      setUsername(usernameParam);
+    }
+
+    // Set auto-connect flag but don't connect yet
+    const autoConnect = params.get("autoconnect");
+    if (autoConnect === "true" && channelParam) {
+      shouldAutoConnect.current = true;
+    }
+  }, [addDebugMessage]);
+
+  // Connect to Twitch chat
+  const connectToChat = useCallback(() => {
+    if (!channel) {
+      alert("Please enter a channel name");
+      return;
+    }
+
+    addDebugMessage(`Connecting to channel: ${channel}`);
+    addDebugMessage(`Current tracking mode: ${trackingMode}`);
+
+    // Create a new client
+    const newClient = new tmi.Client({
+      connection: {
+        secure: true,
+        reconnect: true,
+      },
+      channels: [channel],
+    });
+
+    // Connect to Twitch
+    newClient
+      .connect()
+      .then(() => {
+        setConnected(true);
+        setClient(newClient);
+        addDebugMessage("Successfully connected to Twitch chat");
+      })
+      .catch((err) => {
+        console.error("Connection error:", err);
+        addDebugMessage(`Connection error: ${err.message}`);
+        setConnected(false);
+      });
+  }, [channel, trackingMode, addDebugMessage]);
+
+  // Handle auto-connect after all functions are defined
+  useEffect(() => {
+    if (shouldAutoConnect.current && channel) {
+      addDebugMessage(`Auto-connecting to channel: ${channel}`);
+      // Delay the connection slightly to ensure state has updated
+      setTimeout(() => {
+        connectToChat();
+        shouldAutoConnect.current = false; // Prevent connecting multiple times
+      }, 500);
+    }
+  }, [channel, connectToChat, addDebugMessage]);
+
+  // Disconnect from Twitch chat
+  const disconnectFromChat = useCallback(() => {
+    if (client) {
+      addDebugMessage("Disconnecting from Twitch chat");
+      client.disconnect();
+      setClient(null);
+      setConnected(false);
+    }
+  }, [client, addDebugMessage]);
+
+  // Clear messages and votes
+  const clearBoard = useCallback(() => {
+    addDebugMessage("Clearing message board");
+    setMessages([]);
+    setVotes({});
+  }, [addDebugMessage]);
+
+  // Manually upvote a message
+  const upvoteMessage = useCallback(
+    (messageId, content) => {
+      addDebugMessage(`Manual upvote for message id: ${messageId}`);
+
+      // Update votes count
+      setVotes((prevVotes) => {
+        const newVotes = { ...prevVotes };
+        newVotes[content] = (newVotes[content] || 0) + 1;
+        return newVotes;
+      });
+
+      // Update the message
+      setMessages((prevMessages) => {
+        const existingVoteIndex = prevMessages.findIndex(
+          (msg) => msg.id === messageId
+        );
+
+        if (existingVoteIndex !== -1) {
+          const updatedMessages = [...prevMessages];
+          updatedMessages[existingVoteIndex] = {
+            ...updatedMessages[existingVoteIndex],
+            voteCount: (updatedMessages[existingVoteIndex].voteCount || 0) + 1,
+            timestamp: new Date().toLocaleTimeString(),
+          };
+          return updatedMessages;
+        }
+
+        return prevMessages;
+      });
+    },
+    [addDebugMessage]
+  );
+
+  // Extract message content without cheer commands
+  const extractMessageContent = (message, tags) => {
+    // Attempt to remove cheer command patterns from the message
+    let content = message;
+
+    // Log the raw message for debugging
+    addDebugMessage(`Raw message with cheer: "${message}"`);
+
+    // If there's a custom cheer emote in the tags, we can get a cleaner message
+    if (tags.emotes) {
+      addDebugMessage(`Message has emotes: ${JSON.stringify(tags.emotes)}`);
+    }
+
+    // Remove common cheer patterns like "cheer100" from the message
+    content = content.replace(/\bcheer\d+\b/gi, "").trim();
+
+    // Remove additional cheer-related patterns
+    content = content.replace(/\bcheer\b/gi, "").trim(); // Remove standalone "cheer"
+    content = content.replace(/^\s*bits\s*/i, "").trim(); // Remove "bits" at start
+
+    addDebugMessage(`Cleaned cheer message: "${content}"`);
+
+    return content;
+  };
+
+  // Process incoming messages based on tracking mode
+  useEffect(() => {
+    if (!client) return;
+
+    addDebugMessage(`Setting up message handler with mode: ${trackingMode}`);
+
+    // Handle regular messages
+    const handleMessage = (channelName, tags, message) => {
+      // Log all messages when in cheer mode for debugging
+      if (trackingMode === "cheer") {
+        addDebugMessage(`Received message: "${message}"`);
+        addDebugMessage(`Message tags: ${JSON.stringify(tags, null, 2)}`);
+      }
+
+      // Detailed logging of tags for all messages to understand the structure
+      if (trackingMode === "cheer" && Object.keys(tags).length > 0) {
+        console.log("Message tags:", tags);
+      }
+
+      // Check if we should process this message
+      if (
+        trackingMode === "user" &&
+        tags.username.toLowerCase() === username.toLowerCase()
+      ) {
+        addDebugMessage(`User message matched: ${tags.username}`);
+        // Add a regular message
+        setMessages((prevMessages) => [
+          ...prevMessages,
+          {
+            id: Date.now(),
+            username: tags.username,
+            displayName: tags["display-name"] || tags.username,
+            content: message,
+            timestamp: new Date().toLocaleTimeString(),
+            type: "message",
+          },
+        ]);
+      }
+    };
+
+    // Handle cheer/bits events specifically
+    const handleCheer = (channelName, tags, message) => {
+      if (trackingMode === "cheer") {
+        addDebugMessage(`Cheer detected! Bits: ${tags.bits}`);
+        addDebugMessage(`Cheer from: ${tags["display-name"] || tags.username}`);
+        addDebugMessage(`Message content: ${message}`);
+
+        // Process cheer message
+        const voteContent = extractMessageContent(message, tags);
+
+        if (!voteContent) {
+          addDebugMessage(`Empty content after extraction, skipping`);
+          return; // Skip empty content
+        }
+
+        setVotes((prevVotes) => {
+          const newVotes = { ...prevVotes };
+          newVotes[voteContent] = (newVotes[voteContent] || 0) + 1;
+          addDebugMessage(
+            `Vote count for "${voteContent}": ${newVotes[voteContent]}`
+          );
+          return newVotes;
+        });
+
+        // Find if this vote already exists
+        setMessages((prevMessages) => {
+          // Find existing vote with same content
+          const existingVoteIndex = prevMessages.findIndex(
+            (msg) => msg.type === "vote" && msg.content === voteContent
+          );
+
+          if (existingVoteIndex !== -1) {
+            // Update existing vote
+            addDebugMessage(`Updating existing vote for "${voteContent}"`);
+            const updatedMessages = [...prevMessages];
+            updatedMessages[existingVoteIndex] = {
+              ...updatedMessages[existingVoteIndex],
+              voteCount:
+                (updatedMessages[existingVoteIndex].voteCount || 0) + 1,
+              lastVoter: tags["display-name"] || tags.username,
+              timestamp: new Date().toLocaleTimeString(),
+            };
+            return updatedMessages;
+          } else {
+            // Add new vote
+            addDebugMessage(`Adding new vote for "${voteContent}"`);
+            return [
+              ...prevMessages,
+              {
+                id: Date.now(),
+                username: tags.username,
+                displayName: tags["display-name"] || tags.username,
+                content: voteContent,
+                timestamp: new Date().toLocaleTimeString(),
+                type: "vote",
+                voteCount: 1,
+                bits: tags.bits, // Store the bits amount for reference
+              },
+            ];
+          }
+        });
+      }
+    };
+
+    // Register message handlers
+    client.on("message", handleMessage);
+    client.on("cheer", handleCheer); // Add dedicated cheer handler
+    addDebugMessage("Message handlers registered");
+
+    // Cleanup
+    return () => {
+      client.removeListener("message", handleMessage);
+      client.removeListener("cheer", handleCheer); // Clean up cheer handler
+      addDebugMessage("Message handlers removed");
+    };
+  }, [client, trackingMode, username, addDebugMessage]);
+
+  return {
+    channel,
+    setChannel,
+    trackingMode,
+    setTrackingMode,
+    username,
+    setUsername,
+    connected,
+    messages,
+    votes,
+    debug, // Expose debug log
+    connectToChat,
+    disconnectFromChat,
+    clearBoard,
+    upvoteMessage,
+  };
+};
+
+export default useTwitchChat;
