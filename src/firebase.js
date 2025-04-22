@@ -9,18 +9,24 @@ import {
   increment,
 } from "firebase/database";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Firebase configuration from environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyPlaceholder",
-  authDomain: "tts-voter.firebaseapp.com",
-  databaseURL: "https://tts-voter-default-rtdb.firebaseio.com",
-  projectId: "tts-voter",
-  storageBucket: "tts-voter.appspot.com",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:abcdefghijklmnopqrstuv",
-  measurementId: "G-ABCDEFGHIJ",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
+
+// Log if any required environment variables are missing
+if (!firebaseConfig.apiKey || !firebaseConfig.databaseURL) {
+  console.error(
+    "Firebase environment variables are missing. Please check your .env file."
+  );
+}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

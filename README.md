@@ -34,7 +34,19 @@ A React application that displays Twitch chat messages and tracks votes/cheers i
    - Create a Firebase project at [firebase.google.com](https://firebase.google.com)
    - Enable Realtime Database
    - Copy your Firebase config from Project Settings > Your Apps
-   - Update the `firebaseConfig` in `src/firebase.js`
+   - Create a `.env.local` file with your Firebase credentials:
+
+   ```
+   # Firebase Configuration
+   VITE_FIREBASE_API_KEY=your-api-key
+   VITE_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+   VITE_FIREBASE_DATABASE_URL=https://your-project-id-default-rtdb.firebaseio.com
+   VITE_FIREBASE_PROJECT_ID=your-project-id
+   VITE_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your-messaging-sender-id
+   VITE_FIREBASE_APP_ID=your-app-id
+   VITE_FIREBASE_MEASUREMENT_ID=your-measurement-id
+   ```
 
 4. Start the development server:
 

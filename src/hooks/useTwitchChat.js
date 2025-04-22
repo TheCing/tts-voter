@@ -2,15 +2,17 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import tmi from "tmi.js";
 import config from "../config.json";
-import { 
-  setupVotesListener, 
-  setupMessagesListener, 
-  incrementVote, 
-  addMessage 
+import {
+  setupVotesListener,
+  setupMessagesListener,
+  incrementVote,
+  addMessage,
 } from "../firebase";
 
 const useTwitchChat = () => {
-  const [channel, setChannel] = useState(config.channel || "twitchdev");
+  const [channel, setChannel] = useState(
+    import.meta.env.VITE_DEFAULT_CHANNEL || config.channel || "twitchdev"
+  );
   const [trackingMode, setTrackingMode] = useState(
     config.trackingMode || "cheer"
   );
@@ -36,21 +38,25 @@ const useTwitchChat = () => {
   // Setup Firebase listeners
   useEffect(() => {
     addDebugMessage("Setting up Firebase listeners");
-    
+
     // Set up votes listener
     const unsubscribeVotes = setupVotesListener((updatedVotes) => {
       setVotes(updatedVotes);
-      addDebugMessage(`Received ${Object.keys(updatedVotes).length} votes from Firebase`);
+      addDebugMessage(
+        `Received ${Object.keys(updatedVotes).length} votes from Firebase`
+      );
     });
-    
+
     // Set up messages listener
     const unsubscribeMessages = setupMessagesListener((updatedMessages) => {
       if (updatedMessages.length > 0 && messages.length === 0) {
         setMessages(updatedMessages);
-        addDebugMessage(`Received ${updatedMessages.length} messages from Firebase`);
+        addDebugMessage(
+          `Received ${updatedMessages.length} messages from Firebase`
+        );
       }
     });
-    
+
     // Cleanup listeners on unmount
     return () => {
       unsubscribeVotes();
@@ -240,7 +246,7 @@ const useTwitchChat = () => {
         tags.username.toLowerCase() === username.toLowerCase()
       ) {
         addDebugMessage(`User message matched: ${tags.username}`);
-        
+
         // Create message object
         const newMessage = {
           id: Date.now(),
@@ -250,7 +256,7 @@ const useTwitchChat = () => {
           timestamp: new Date().toLocaleTimeString(),
           type: "message",
         };
-        
+
         // Add to Firebase
         addMessage(newMessage)
           .then(() => {
@@ -290,7 +296,9 @@ const useTwitchChat = () => {
         // Increment vote in Firebase
         incrementVote(voteContent)
           .then(() => {
-            addDebugMessage(`Vote incremented in Firebase for cheer: ${voteContent}`);
+            addDebugMessage(
+              `Vote incremented in Firebase for cheer: ${voteContent}`
+            );
           })
           .catch((error) => {
             console.error("Error incrementing vote:", error);
@@ -308,7 +316,7 @@ const useTwitchChat = () => {
           voteCount: 1, // Initial vote count, will be updated by Firebase
           bits: tags.bits,
         };
-        
+
         // Add message to Firebase
         addMessage(newVoteMessage)
           .then(() => {

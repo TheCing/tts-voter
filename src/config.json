@@ -1,11 +1,12 @@
 {
-  "channel": "DougDoug",
+  "channel": "twitchdev",
   "trackingMode": "cheer",
-  "defaultUsername": "DougDoug",
+  "defaultUsername": "twitchdev",
   "autoConnect": true,
   "votingThreshold": 300,
   "leaderboardSize": 10,
   "refreshInterval": 60000,
+  "useEnvVars": true,
   "theme": {
     "primary": "#9146ff",
     "secondary": "#772ce8",
