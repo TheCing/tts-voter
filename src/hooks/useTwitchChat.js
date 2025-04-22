@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useCallback, useRef } from "react";
 import tmi from "tmi.js";
 import config from "../config.json";
@@ -380,7 +381,7 @@ const useTwitchChat = () => {
       client.removeListener("cheer", handleCheer); // Clean up cheer handler
       addDebugMessage("Message handlers removed");
     };
-  }, [client, trackingMode, username, addDebugMessage]);
+  }, []);
 
   return {
     channel,

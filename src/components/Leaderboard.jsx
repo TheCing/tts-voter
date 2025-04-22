@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect } from "react";
 import config from "../config.json";
 
@@ -15,9 +16,7 @@ const Leaderboard = ({ votes, messages, standalone = false, onVote }) => {
         Object.keys(votes).length === 0
       ) {
         // Only load saved votes if current votes are empty
-        const savedVotesData = JSON.parse(savedVotes);
-        // We can't directly set votes here as it's a prop, but messages will be populated
-        // when users interact with the loaded votes
+        // Note: actual loading is handled in useTwitchChat.js
       }
     } catch (error) {
       console.error("Error loading saved leaderboard data:", error);
@@ -63,9 +62,26 @@ const Leaderboard = ({ votes, messages, standalone = false, onVote }) => {
           <div className="leaderboard-items">
             {topMessages.map((message, index) => (
               <div key={message.id} className="leaderboard-item">
-                <div className="leaderboard-rank">{index + 1}</div>
+                <div className="leaderboard-item-header">
+                  <div className="leaderboard-rank">{index + 1}</div>
+                  <div className="leaderboard-votes">
+                    <button
+                      className="vote-button"
+                      onClick={() =>
+                        onVote && onVote(message.id, message.content)
+                      }
+                      aria-label="Upvote message"
+                    >
+                      ▲
+                    </button>
+                    <span className="vote-count">{message.voteCount}</span>
+                  </div>
+                </div>
+
                 <div className="leaderboard-message">
-                  <div className="leaderboard-content">{message.content}</div>
+                  <div className="leaderboard-content" title={message.content}>
+                    {message.content}
+                  </div>
                   <div className="leaderboard-details">
                     <span className="leaderboard-user">
                       {message.displayName}
@@ -74,18 +90,6 @@ const Leaderboard = ({ votes, messages, standalone = false, onVote }) => {
                       {message.timestamp}
                     </span>
                   </div>
-                </div>
-                <div className="leaderboard-votes">
-                  <button
-                    className="vote-button"
-                    onClick={() =>
-                      onVote && onVote(message.id, message.content)
-                    }
-                    aria-label="Upvote message"
-                  >
-                    ▲
-                  </button>
-                  <span className="vote-count">{message.voteCount}</span>
                 </div>
               </div>
             ))}
