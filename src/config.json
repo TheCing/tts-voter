@@ -1,7 +1,7 @@
 {
-  "channel": "twitchdev",
+  "channel": "DougDoug",
   "trackingMode": "cheer",
-  "defaultUsername": "twitchdev",
+  "defaultUsername": "DougDoug",
   "autoConnect": true,
   "votingThreshold": 300,
   "leaderboardSize": 10,
