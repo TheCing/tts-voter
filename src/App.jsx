@@ -9,8 +9,8 @@ function App() {
   const { messages, votes, upvoteMessage } = useTwitchChat();
 
   // Settings state - simplified for viewer mode
-  const [showNamecards, setShowNamecards] = useState(true);
-  const [transparency, setTransparency] = useState(false);
+  const [showNamecards, _setShowNamecards] = useState(true);
+  const [transparency, _setTransparency] = useState(false);
 
   // Check if the component should be rendered in standalone mode for OBS
   const [componentToShow, setComponentToShow] = useState("all");

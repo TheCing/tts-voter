@@ -1,35 +1,40 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import tmi from "tmi.js";
+import config from "../config.json";
 
 const useTwitchChat = () => {
-  const [channel, setChannel] = useState("");
-  const [trackingMode, setTrackingMode] = useState("user");
-  const [username, setUsername] = useState("");
+  const [channel, setChannel] = useState(config.channel || "twitchdev");
+  const [trackingMode, setTrackingMode] = useState(
+    config.trackingMode || "cheer"
+  );
+  const [username, setUsername] = useState(
+    config.defaultUsername || "twitchdev"
+  );
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [votes, setVotes] = useState({});
+
+  // Initialize votes from localStorage if available
+  const [votes, setVotes] = useState(() => {
+    try {
+      const savedVotes = localStorage.getItem("ttsVoterLeaderboard");
+      return savedVotes ? JSON.parse(savedVotes) : {};
+    } catch (error) {
+      console.error("Error loading saved votes:", error);
+      return {};
+    }
+  });
+
   const [client, setClient] = useState(null);
   const [debug, setDebug] = useState([]); // Debug log array
-  const shouldAutoConnect = useRef(false);
+  const shouldAutoConnect = useRef(config.autoConnect);
 
   // Add message to debug log
   const addDebugMessage = useCallback((message) => {
-    // Only log in development environment
-    if (import.meta.env.DEV) {
-      // Adding timestamp and styling to console logs
-      const timestamp = new Date().toLocaleTimeString();
-      console.log(
-        `%c${timestamp} %c[DEBUG] %c${message}`,
-        "color: gray",
-        "color: #9146ff; font-weight: bold",
-        "color: white"
-      );
-
-      setDebug((prev) => [
-        ...prev,
-        { time: new Date().toISOString(), message },
-      ]);
-    }
+    console.log(`[TwitchChat] ${message}`);
+    setDebug((prev) => [
+      ...prev,
+      { time: new Date().toLocaleTimeString(), message },
+    ]);
   }, []);
 
   // Check URL parameters for OBS browser source config
@@ -40,36 +45,46 @@ const useTwitchChat = () => {
     const channelParam = params.get("channel");
     if (channelParam) {
       setChannel(channelParam);
-    } else {
-      // Set a default channel for viewer mode
-      setChannel("twitchdev");
+      addDebugMessage(`Channel override from URL: ${channelParam}`);
+    } else if (!channel) {
+      // Fallback to config
+      setChannel(config.channel);
+      addDebugMessage(`Using config channel: ${config.channel}`);
     }
 
     // If tracking mode parameter exists, set it
     const trackingParam = params.get("tracking");
     if (trackingParam && ["user", "cheer"].includes(trackingParam)) {
       setTrackingMode(trackingParam);
-      addDebugMessage(`Set tracking mode from URL: ${trackingParam}`);
-    } else {
-      // Default to cheer mode for viewer layout
-      setTrackingMode("cheer");
+      addDebugMessage(`Tracking mode override from URL: ${trackingParam}`);
+    } else if (!trackingMode || trackingMode === "") {
+      // Fallback to config
+      setTrackingMode(config.trackingMode);
+      addDebugMessage(`Using config tracking mode: ${config.trackingMode}`);
     }
 
     // If username parameter exists, set it
     const usernameParam = params.get("username");
     if (usernameParam) {
       setUsername(usernameParam);
+      addDebugMessage(`Username override from URL: ${usernameParam}`);
+    } else if (!username || username === "") {
+      // Fallback to config
+      setUsername(config.defaultUsername);
     }
 
     // Set auto-connect flag but don't connect yet
     const autoConnect = params.get("autoconnect");
     if (autoConnect === "true" && channelParam) {
       shouldAutoConnect.current = true;
+    } else if (autoConnect === "false") {
+      shouldAutoConnect.current = false;
     } else {
-      // Default to auto-connect for viewer mode
-      shouldAutoConnect.current = true;
+      // Fallback to config
+      shouldAutoConnect.current = config.autoConnect;
+      addDebugMessage(`Using config autoconnect: ${config.autoConnect}`);
     }
-  }, [addDebugMessage]);
+  }, [addDebugMessage, channel, trackingMode, username]);
 
   // Connect to Twitch chat
   const connectToChat = useCallback(() => {
@@ -81,7 +96,7 @@ const useTwitchChat = () => {
     addDebugMessage(`Connecting to channel: ${channel}`);
     addDebugMessage(`Current tracking mode: ${trackingMode}`);
 
-    // Create a new client
+    // Create a new client with config settings
     const newClient = new tmi.Client({
       connection: {
         secure: true,
@@ -127,11 +142,59 @@ const useTwitchChat = () => {
     }
   }, [client, addDebugMessage]);
 
+  // Save votes to localStorage whenever they change
+  useEffect(() => {
+    if (Object.keys(votes).length > 0) {
+      try {
+        localStorage.setItem("ttsVoterLeaderboard", JSON.stringify(votes));
+      } catch (error) {
+        console.error("Error saving leaderboard data:", error);
+      }
+    }
+  }, [votes]);
+
+  // Restore messages for previously saved votes
+  useEffect(() => {
+    try {
+      // Check if we have votes loaded but no messages yet
+      if (Object.keys(votes).length > 0 && messages.length === 0) {
+        // Create placeholder messages for each vote content
+        const currentDate = new Date().toLocaleString();
+        const storedMessages = Object.entries(votes).map(
+          ([content, count]) => ({
+            id: Date.now() + Math.random(), // Generate a unique ID
+            username: "saved",
+            displayName: "Saved Vote",
+            content: content,
+            timestamp: currentDate,
+            type: "vote",
+            voteCount: count,
+          })
+        );
+
+        if (storedMessages.length > 0) {
+          setMessages(storedMessages);
+          addDebugMessage(
+            `Restored ${storedMessages.length} saved votes from storage`
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error restoring vote messages:", error);
+    }
+  }, [votes, messages.length, addDebugMessage]);
+
   // Clear messages and votes
   const clearBoard = useCallback(() => {
     addDebugMessage("Clearing message board");
     setMessages([]);
     setVotes({});
+    // Also clear localStorage
+    try {
+      localStorage.removeItem("ttsVoterLeaderboard");
+    } catch (error) {
+      console.error("Error clearing leaderboard data:", error);
+    }
   }, [addDebugMessage]);
 
   // Manually upvote a message
@@ -240,6 +303,15 @@ const useTwitchChat = () => {
         addDebugMessage(`Cheer from: ${tags["display-name"] || tags.username}`);
         addDebugMessage(`Message content: ${message}`);
 
+        // Check if the cheer meets the minimum threshold from config
+        const minThreshold = config.votingThreshold || 0;
+        if (minThreshold > 0 && tags.bits < minThreshold) {
+          addDebugMessage(
+            `Cheer below threshold (${tags.bits}/${minThreshold}), ignoring`
+          );
+          return;
+        }
+
         // Process cheer message
         const voteContent = extractMessageContent(message, tags);
 
@@ -325,6 +397,7 @@ const useTwitchChat = () => {
     disconnectFromChat,
     clearBoard,
     upvoteMessage,
+    config, // Expose the config object
   };
 };
 

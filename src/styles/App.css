@@ -605,11 +605,17 @@ input:checked + .toggle-slider:before {
   margin-top: 4px;
   color: rgba(255, 255, 255, 0.6);
   font-size: 12px;
+  gap: 8px;
 }
 
 .leaderboard-user {
   color: #ff79c6;
   font-weight: bold;
+}
+
+.leaderboard-timestamp {
+  color: rgba(255, 255, 255, 0.5);
+  font-style: italic;
 }
 
 .leaderboard-votes {

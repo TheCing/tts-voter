@@ -1,0 +1,15 @@
+{
+  "channel": "DougDoug",
+  "trackingMode": "cheer",
+  "defaultUsername": "DougDoug",
+  "autoConnect": true,
+  "votingThreshold": 300,
+  "leaderboardSize": 10,
+  "refreshInterval": 60000,
+  "theme": {
+    "primary": "#9146ff",
+    "secondary": "#772ce8",
+    "dark": "#0e0e10",
+    "light": "#efeff1"
+  }
+}
