@@ -2,6 +2,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import tmi from "tmi.js";
 import config from "../config.json";
+import { 
+  setupVotesListener, 
+  setupMessagesListener, 
+  incrementVote, 
+  addMessage 
+} from "../firebase";
 
 const useTwitchChat = () => {
   const [channel, setChannel] = useState(config.channel || "twitchdev");
@@ -13,18 +19,7 @@ const useTwitchChat = () => {
   );
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState([]);
-
-  // Initialize votes from localStorage if available
-  const [votes, setVotes] = useState(() => {
-    try {
-      const savedVotes = localStorage.getItem("ttsVoterLeaderboard");
-      return savedVotes ? JSON.parse(savedVotes) : {};
-    } catch (error) {
-      console.error("Error loading saved votes:", error);
-      return {};
-    }
-  });
-
+  const [votes, setVotes] = useState({});
   const [client, setClient] = useState(null);
   const [debug, setDebug] = useState([]); // Debug log array
   const shouldAutoConnect = useRef(config.autoConnect);
@@ -36,6 +31,32 @@ const useTwitchChat = () => {
       ...prev,
       { time: new Date().toLocaleTimeString(), message },
     ]);
+  }, []);
+
+  // Setup Firebase listeners
+  useEffect(() => {
+    addDebugMessage("Setting up Firebase listeners");
+    
+    // Set up votes listener
+    const unsubscribeVotes = setupVotesListener((updatedVotes) => {
+      setVotes(updatedVotes);
+      addDebugMessage(`Received ${Object.keys(updatedVotes).length} votes from Firebase`);
+    });
+    
+    // Set up messages listener
+    const unsubscribeMessages = setupMessagesListener((updatedMessages) => {
+      if (updatedMessages.length > 0 && messages.length === 0) {
+        setMessages(updatedMessages);
+        addDebugMessage(`Received ${updatedMessages.length} messages from Firebase`);
+      }
+    });
+    
+    // Cleanup listeners on unmount
+    return () => {
+      unsubscribeVotes();
+      unsubscribeMessages();
+      addDebugMessage("Firebase listeners cleaned up");
+    };
   }, []);
 
   // Check URL parameters for OBS browser source config
@@ -143,59 +164,10 @@ const useTwitchChat = () => {
     }
   }, [client, addDebugMessage]);
 
-  // Save votes to localStorage whenever they change
-  useEffect(() => {
-    if (Object.keys(votes).length > 0) {
-      try {
-        localStorage.setItem("ttsVoterLeaderboard", JSON.stringify(votes));
-      } catch (error) {
-        console.error("Error saving leaderboard data:", error);
-      }
-    }
-  }, [votes]);
-
-  // Restore messages for previously saved votes
-  useEffect(() => {
-    try {
-      // Check if we have votes loaded but no messages yet
-      if (Object.keys(votes).length > 0 && messages.length === 0) {
-        // Create placeholder messages for each vote content
-        const currentDate = new Date().toLocaleString();
-        const storedMessages = Object.entries(votes).map(
-          ([content, count]) => ({
-            id: Date.now() + Math.random(), // Generate a unique ID
-            username: "saved",
-            displayName: "Saved Vote",
-            content: content,
-            timestamp: currentDate,
-            type: "vote",
-            voteCount: count,
-          })
-        );
-
-        if (storedMessages.length > 0) {
-          setMessages(storedMessages);
-          addDebugMessage(
-            `Restored ${storedMessages.length} saved votes from storage`
-          );
-        }
-      }
-    } catch (error) {
-      console.error("Error restoring vote messages:", error);
-    }
-  }, [votes, messages.length, addDebugMessage]);
-
-  // Clear messages and votes
+  // Clear messages and votes - local only for now, we don't clear Firebase
   const clearBoard = useCallback(() => {
-    addDebugMessage("Clearing message board");
+    addDebugMessage("Clearing local message board (Firebase data will remain)");
     setMessages([]);
-    setVotes({});
-    // Also clear localStorage
-    try {
-      localStorage.removeItem("ttsVoterLeaderboard");
-    } catch (error) {
-      console.error("Error clearing leaderboard data:", error);
-    }
   }, [addDebugMessage]);
 
   // Manually upvote a message
@@ -203,31 +175,17 @@ const useTwitchChat = () => {
     (messageId, content) => {
       addDebugMessage(`Manual upvote for message id: ${messageId}`);
 
-      // Update votes count
-      setVotes((prevVotes) => {
-        const newVotes = { ...prevVotes };
-        newVotes[content] = (newVotes[content] || 0) + 1;
-        return newVotes;
-      });
+      // Update Firebase vote
+      incrementVote(content)
+        .then(() => {
+          addDebugMessage(`Vote incremented in Firebase for: ${content}`);
+        })
+        .catch((error) => {
+          console.error("Error incrementing vote:", error);
+          addDebugMessage(`Error incrementing vote: ${error.message}`);
+        });
 
-      // Update the message
-      setMessages((prevMessages) => {
-        const existingVoteIndex = prevMessages.findIndex(
-          (msg) => msg.id === messageId
-        );
-
-        if (existingVoteIndex !== -1) {
-          const updatedMessages = [...prevMessages];
-          updatedMessages[existingVoteIndex] = {
-            ...updatedMessages[existingVoteIndex],
-            voteCount: (updatedMessages[existingVoteIndex].voteCount || 0) + 1,
-            timestamp: new Date().toLocaleTimeString(),
-          };
-          return updatedMessages;
-        }
-
-        return prevMessages;
-      });
+      // Local message display is handled by Firebase listener
     },
     [addDebugMessage]
   );
@@ -282,18 +240,26 @@ const useTwitchChat = () => {
         tags.username.toLowerCase() === username.toLowerCase()
       ) {
         addDebugMessage(`User message matched: ${tags.username}`);
-        // Add a regular message
-        setMessages((prevMessages) => [
-          ...prevMessages,
-          {
-            id: Date.now(),
-            username: tags.username,
-            displayName: tags["display-name"] || tags.username,
-            content: message,
-            timestamp: new Date().toLocaleTimeString(),
-            type: "message",
-          },
-        ]);
+        
+        // Create message object
+        const newMessage = {
+          id: Date.now(),
+          username: tags.username,
+          displayName: tags["display-name"] || tags.username,
+          content: message,
+          timestamp: new Date().toLocaleTimeString(),
+          type: "message",
+        };
+        
+        // Add to Firebase
+        addMessage(newMessage)
+          .then(() => {
+            addDebugMessage(`Message saved to Firebase`);
+          })
+          .catch((error) => {
+            console.error("Error saving message:", error);
+            addDebugMessage(`Error saving message: ${error.message}`);
+          });
       }
     };
 
@@ -321,52 +287,37 @@ const useTwitchChat = () => {
           return; // Skip empty content
         }
 
-        setVotes((prevVotes) => {
-          const newVotes = { ...prevVotes };
-          newVotes[voteContent] = (newVotes[voteContent] || 0) + 1;
-          addDebugMessage(
-            `Vote count for "${voteContent}": ${newVotes[voteContent]}`
-          );
-          return newVotes;
-        });
+        // Increment vote in Firebase
+        incrementVote(voteContent)
+          .then(() => {
+            addDebugMessage(`Vote incremented in Firebase for cheer: ${voteContent}`);
+          })
+          .catch((error) => {
+            console.error("Error incrementing vote:", error);
+            addDebugMessage(`Error incrementing vote: ${error.message}`);
+          });
 
-        // Find if this vote already exists
-        setMessages((prevMessages) => {
-          // Find existing vote with same content
-          const existingVoteIndex = prevMessages.findIndex(
-            (msg) => msg.type === "vote" && msg.content === voteContent
-          );
-
-          if (existingVoteIndex !== -1) {
-            // Update existing vote
-            addDebugMessage(`Updating existing vote for "${voteContent}"`);
-            const updatedMessages = [...prevMessages];
-            updatedMessages[existingVoteIndex] = {
-              ...updatedMessages[existingVoteIndex],
-              voteCount:
-                (updatedMessages[existingVoteIndex].voteCount || 0) + 1,
-              lastVoter: tags["display-name"] || tags.username,
-              timestamp: new Date().toLocaleTimeString(),
-            };
-            return updatedMessages;
-          } else {
-            // Add new vote
-            addDebugMessage(`Adding new vote for "${voteContent}"`);
-            return [
-              ...prevMessages,
-              {
-                id: Date.now(),
-                username: tags.username,
-                displayName: tags["display-name"] || tags.username,
-                content: voteContent,
-                timestamp: new Date().toLocaleTimeString(),
-                type: "vote",
-                voteCount: 1,
-                bits: tags.bits, // Store the bits amount for reference
-              },
-            ];
-          }
-        });
+        // Create new vote message
+        const newVoteMessage = {
+          id: Date.now(),
+          username: tags.username,
+          displayName: tags["display-name"] || tags.username,
+          content: voteContent,
+          timestamp: new Date().toLocaleTimeString(),
+          type: "vote",
+          voteCount: 1, // Initial vote count, will be updated by Firebase
+          bits: tags.bits,
+        };
+        
+        // Add message to Firebase
+        addMessage(newVoteMessage)
+          .then(() => {
+            addDebugMessage(`Vote message saved to Firebase`);
+          })
+          .catch((error) => {
+            console.error("Error saving vote message:", error);
+            addDebugMessage(`Error saving vote message: ${error.message}`);
+          });
       }
     };
 
@@ -381,7 +332,7 @@ const useTwitchChat = () => {
       client.removeListener("cheer", handleCheer); // Clean up cheer handler
       addDebugMessage("Message handlers removed");
     };
-  }, []);
+  }, [client, trackingMode, username, addDebugMessage]);
 
   return {
     channel,
