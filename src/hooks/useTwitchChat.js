@@ -40,6 +40,9 @@ const useTwitchChat = () => {
     const channelParam = params.get("channel");
     if (channelParam) {
       setChannel(channelParam);
+    } else {
+      // Set a default channel for viewer mode
+      setChannel("twitchdev");
     }
 
     // If tracking mode parameter exists, set it
@@ -47,6 +50,9 @@ const useTwitchChat = () => {
     if (trackingParam && ["user", "cheer"].includes(trackingParam)) {
       setTrackingMode(trackingParam);
       addDebugMessage(`Set tracking mode from URL: ${trackingParam}`);
+    } else {
+      // Default to cheer mode for viewer layout
+      setTrackingMode("cheer");
     }
 
     // If username parameter exists, set it
@@ -58,6 +64,9 @@ const useTwitchChat = () => {
     // Set auto-connect flag but don't connect yet
     const autoConnect = params.get("autoconnect");
     if (autoConnect === "true" && channelParam) {
+      shouldAutoConnect.current = true;
+    } else {
+      // Default to auto-connect for viewer mode
       shouldAutoConnect.current = true;
     }
   }, [addDebugMessage]);

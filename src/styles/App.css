@@ -527,3 +527,132 @@ input:checked + .toggle-slider:before {
   text-align: center;
   padding: 20px;
 }
+
+/* Date Header Component */
+.date-header.component-module {
+  text-align: center;
+  padding: 20px;
+  min-height: 40px;
+  flex: 0 0 auto;
+  background-color: var(--dark);
+  border-color: var(--primary);
+}
+
+.date-header h1 {
+  margin: 0;
+  font-size: 24px;
+  color: var(--light);
+}
+
+/* Leaderboard Component */
+.leaderboard.component-module {
+  padding: 20px;
+  padding-top: 25px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.leaderboard-content {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.leaderboard-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.leaderboard-item {
+  display: flex;
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.leaderboard-rank {
+  font-size: 18px;
+  font-weight: bold;
+  min-width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--primary);
+  color: var(--light);
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.leaderboard-message {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-right: 10px;
+}
+
+.leaderboard-content {
+  font-size: 16px;
+  word-break: break-word;
+}
+
+.leaderboard-details {
+  display: flex;
+  margin-top: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 12px;
+}
+
+.leaderboard-user {
+  color: #ff79c6;
+  font-weight: bold;
+}
+
+.leaderboard-votes {
+  display: flex;
+  align-items: center;
+}
+
+.leaderboard-empty {
+  padding: 20px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Viewer Layout */
+.viewer-layout {
+  background: linear-gradient(
+    to bottom,
+    rgba(35, 25, 66, 0.8),
+    rgba(14, 14, 16, 0.9)
+  );
+}
+
+.viewer-layout .left-column {
+  flex: 0 0 300px; /* Fixed width for left column */
+}
+
+.viewer-layout .right-column {
+  flex: 1; /* Flexible width for right column */
+}
+
+/* Media query for mobile devices */
+@media (max-width: 768px) {
+  .viewer-layout {
+    flex-direction: column;
+  }
+
+  .viewer-layout .left-column {
+    flex: none;
+    width: 100%;
+    max-height: none;
+  }
+
+  .viewer-layout .right-column {
+    margin-top: 20px;
+  }
+}
