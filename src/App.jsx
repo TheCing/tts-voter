@@ -4,6 +4,7 @@ import MessageBoard from "./components/MessageBoard";
 import Leaderboard from "./components/Leaderboard";
 import StreamTitle from "./components/StreamTitle";
 import FirebaseDebug from "./components/FirebaseDebug";
+import Footer from "./components/Footer";
 import useTwitchChat from "./hooks/useTwitchChat";
 import { formatDateKey } from "./firebase";
 import "./styles/App.css";
@@ -119,35 +120,51 @@ function App() {
 
   // Render specific component for OBS browser source
   if (componentToShow === "date") {
-    return <DateHeader standalone={true} onDateChange={handleDateChange} />;
+    return (
+      <>
+        <DateHeader standalone={true} onDateChange={handleDateChange} />
+        <Footer />
+      </>
+    );
   }
 
   if (componentToShow === "stream-title") {
-    return <StreamTitle channelName={channel} standalone={true} />;
+    return (
+      <>
+        <StreamTitle channelName={channel} standalone={true} />
+        <Footer />
+      </>
+    );
   }
 
   if (componentToShow === "messages") {
     return (
-      <MessageBoard
-        messages={messages}
-        votes={votes}
-        standalone={true}
-        onVote={upvoteMessage}
-        onResetVote={resetVoteMessage}
-        dateKey={selectedDateKey}
-      />
+      <>
+        <MessageBoard
+          messages={messages}
+          votes={votes}
+          standalone={true}
+          onVote={upvoteMessage}
+          onResetVote={resetVoteMessage}
+          dateKey={selectedDateKey}
+        />
+        <Footer />
+      </>
     );
   }
 
   if (componentToShow === "leaderboard") {
     return (
-      <Leaderboard
-        votes={votes}
-        messages={messages}
-        standalone={true}
-        onVote={upvoteMessage}
-        dateKey={selectedDateKey}
-      />
+      <>
+        <Leaderboard
+          votes={votes}
+          messages={messages}
+          standalone={true}
+          onVote={upvoteMessage}
+          dateKey={selectedDateKey}
+        />
+        <Footer />
+      </>
     );
   }
 
@@ -194,6 +211,7 @@ function App() {
             </button>
           </div>
         )}
+        <Footer />
       </div>
     </div>
   );
