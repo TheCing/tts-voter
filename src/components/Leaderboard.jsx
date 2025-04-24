@@ -2,7 +2,13 @@
 import React, { useEffect } from "react";
 import config from "../config.json";
 
-const Leaderboard = ({ votes, messages, standalone = false, onVote }) => {
+const Leaderboard = ({
+  votes,
+  messages,
+  standalone = false,
+  onVote,
+  dateKey,
+}) => {
   // Use leaderboardSize from config instead of hardcoded value
   const leaderboardSize = config.leaderboardSize || 10;
 
@@ -75,6 +81,7 @@ const Leaderboard = ({ votes, messages, standalone = false, onVote }) => {
                       ▲
                     </button>
                     <span className="vote-count">{message.voteCount}</span>
+                    <span className="vote-text">Vote +1</span>
                   </div>
                 </div>
 
@@ -86,6 +93,9 @@ const Leaderboard = ({ votes, messages, standalone = false, onVote }) => {
                     <span className="leaderboard-user">
                       {message.displayName}
                     </span>
+                    {message.bits && (
+                      <span className="bits-badge">{message.bits} bits</span>
+                    )}
                     <span className="leaderboard-timestamp">
                       {message.timestamp}
                     </span>
@@ -97,8 +107,9 @@ const Leaderboard = ({ votes, messages, standalone = false, onVote }) => {
         ) : (
           <div className="leaderboard-empty">
             <p>
-              No votes yet! Use the upvote button on messages to see them appear
-              here.
+              {dateKey && dateKey !== new Date().toISOString().split("T")[0]
+                ? `No votes for this date`
+                : "No votes yet! Use the upvote button on messages to see them appear here."}
             </p>
           </div>
         )}

@@ -14,6 +14,8 @@ A React application that displays Twitch chat messages and tracks votes/cheers i
 - 🔧 Configurable settings (voting threshold, leaderboard size)
 - 📱 Responsive design that works on all devices
 - 🖥️ OBS-friendly with standalone component views
+- 📡 Stream title display from Twitch API
+- 🔄 Automatic token refresh for production
 
 ## Installation
 
@@ -48,13 +50,29 @@ A React application that displays Twitch chat messages and tracks votes/cheers i
    VITE_FIREBASE_MEASUREMENT_ID=your-measurement-id
    ```
 
-4. Start the development server:
+4. (Optional) Set up Twitch API for stream title display:
+   - Register a new application at [Twitch Developer Console](https://dev.twitch.tv/console/apps)
+   - Create an application with a name (category: website integration)
+   - Get your Client ID from the console
+   - Generate an access token using the [Twitch Token Generator](https://twitchapps.com/tokengen/)
+     - Enter your Client ID
+     - For scopes, enter: `user:read:email channel:read:stream`
+     - Authorize and copy the token
+   - Add these credentials to your `.env.local` file:
+
+   ```
+   # Twitch API Credentials
+   VITE_TWITCH_CLIENT_ID=your-client-id
+   VITE_TWITCH_ACCESS_TOKEN=your-access-token
+   ```
+
+5. Start the development server:
 
    ```
    npm run dev
    ```
 
-5. Build for production:
+6. Build for production:
 
    ```
    npm run build
@@ -101,11 +119,57 @@ https://your-vercel-app.vercel.app/?component=messages&channel=yourChannel&track
 
 Parameters:
 
-- `component`: Which component to show (`date`, `messages`, `leaderboard`)
+- `component`: Which component to show (`date`, `messages`, `leaderboard`, `stream-title`)
 - `channel`: Your Twitch channel name
 - `tracking`: The tracking mode (`user` or `cheer`)
 - `username`: Username to track (for user mode)
 - `autoconnect`: Whether to connect automatically (`true` or `false`)
+- `debug`: Enable debug mode (`true` to show debug panels)
+
+### Debug Mode
+
+If you're experiencing issues with Firebase or other services, you can use debug mode:
+
+1. Press `Ctrl+Shift+D` to toggle debug panels
+2. Add `?debug=true` to your URL to start with debug mode enabled
+3. The debug panel shows Firebase connection status, environment variables, and troubleshooting tips
+4. Check your browser console for additional error messages
+
+### Firebase Database Rules
+
+For proper operation in production, add these rules to your Firebase Realtime Database:
+
+```json
+{
+  "rules": {
+    "votes": {
+      ".read": true,
+      ".write": "auth != null || !data.exists()"
+    },
+    "messages": {
+      ".read": true,
+      ".write": "auth != null || !data.exists()"
+    }
+  }
+}
+```
+
+For development/testing, you might need to use these more permissive rules:
+
+```json
+{
+  "rules": {
+    "votes": {
+      ".read": true,
+      ".write": true
+    },
+    "messages": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
+```
 
 ## Deployment to Vercel
 
@@ -114,7 +178,37 @@ This project is designed to be deployed on Vercel:
 1. Push your code to GitHub
 2. Connect your GitHub repository in Vercel
 3. Deploy with the default settings
-4. Your app will be live with the shared leaderboard!
+4. Set up the following environment variables in Vercel:
+   - All Firebase variables from your `.env.local` file
+   - `TWITCH_CLIENT_ID`: Your Twitch app client ID
+   - `VERCEL_API_TOKEN`: A Vercel API token from your account settings
+   - `VERCEL_PROJECT_ID`: Your project ID (found in Vercel project settings)
+   - `VERCEL_TEAM_ID`: (Optional) Your team ID if using a team account
+   - `REFRESH_SECRET`: A random string for securing the token refresh endpoint
+   - `VITE_TWITCH_ACCESS_TOKEN`: Your Twitch access token (must be refreshed manually)
+5. The automatic token refresh reminder will run every 12 hours
+
+### Twitch Token Manual Update (For Public Apps)
+
+Since you're using a public Twitch application, you'll need to manually refresh your token periodically:
+
+1. Visit [Twitch Token Generator](https://twitchapps.com/tokengen/)
+2. Enter your Client ID
+3. For scopes, enter: `user:read:email channel:read:stream`
+4. Authorize and copy the generated token
+5. Update the `VITE_TWITCH_ACCESS_TOKEN` environment variable in your Vercel project settings
+
+You'll receive a reminder when the token needs to be refreshed by visiting:
+
+```
+https://your-vercel-app.vercel.app/api/refresh-token
+```
+
+Include your refresh secret in the authorization header:
+
+```
+Authorization: Bearer your-refresh-secret
+```
 
 ## License
 
@@ -126,6 +220,7 @@ MIT License
 - [TMI.js](https://github.com/tmijs/tmi.js) - JavaScript library for connecting to Twitch chat
 - [React](https://reactjs.org/) - JavaScript library for building user interfaces
 - [Vite](https://vitejs.dev/) - Next-generation frontend tooling
+- [Twitch API](https://dev.twitch.tv/) - Twitch Developer API for retrieving stream information
 - Twitch Interactive, Inc. - For providing the chat infrastructure
 
 ---
