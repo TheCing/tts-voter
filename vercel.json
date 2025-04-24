@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/refresh-token",
+      "schedule": "0 */12 * * *"
+    }
+  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "framework": "vite"
+}
