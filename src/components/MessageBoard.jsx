@@ -2,6 +2,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import Message from "./Message";
 
+// Add dev mode check flag
+const isDev = import.meta.env.DEV;
+
 const MessageBoard = ({
   messages,
   votes,
@@ -139,7 +142,7 @@ const MessageBoard = ({
           {autoScroll ? "Auto-scroll ON" : "Auto-scroll OFF"}
         </button>
 
-        {!standalone && (
+        {isDev && !standalone && (
           <button
             className="test-button"
             onClick={() => setShowTestControls(!showTestControls)}
@@ -149,7 +152,7 @@ const MessageBoard = ({
           </button>
         )}
 
-        {showTestControls && !standalone && (
+        {isDev && showTestControls && !standalone && (
           <button
             className="generate-test-button"
             onClick={createTestMessages}
