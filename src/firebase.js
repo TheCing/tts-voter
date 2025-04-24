@@ -11,6 +11,7 @@ import {
   orderByChild,
   equalTo,
   push,
+  get,
 } from "firebase/database";
 
 // Firebase configuration from environment variables
@@ -77,22 +78,59 @@ const addTimestampToMessage = (message) => {
   return dateObj;
 };
 
-export const incrementVote = (content) => {
+export const incrementVote = (content, userId) => {
   const contentKey = encodeURIComponent(content).replace(/\./g, "%2E");
   const voteRef = ref(database, `votes/${contentKey}`);
-  return update(voteRef, {
-    count: increment(1),
-    lastUpdated: Date.now(),
-    dateKey: formatDateKey(new Date()),
-  }).catch((error) => {
-    console.error("Error incrementing vote:", error);
-    throw error;
+
+  // First check if this user has already voted
+  return hasUserVotedForMessage(content, userId).then((hasVoted) => {
+    if (hasVoted) {
+      console.log(`User ${userId} already voted for this message`);
+      return Promise.reject(
+        new Error("User has already voted for this message")
+      );
+    }
+
+    // Record the user's vote
+    const userVoteRef = ref(database, `userVotes/${contentKey}/${userId}`);
+    set(userVoteRef, true);
+
+    // Increment the vote count
+    return update(voteRef, {
+      count: increment(1),
+      lastUpdated: Date.now(),
+      dateKey: formatDateKey(new Date()),
+    }).catch((error) => {
+      console.error("Error incrementing vote:", error);
+      throw error;
+    });
   });
+};
+
+export const hasUserVotedForMessage = (content, userId) => {
+  if (!userId) return Promise.resolve(false);
+
+  const contentKey = encodeURIComponent(content).replace(/\./g, "%2E");
+  const userVoteRef = ref(database, `userVotes/${contentKey}/${userId}`);
+
+  return get(userVoteRef)
+    .then((snapshot) => {
+      return snapshot.exists();
+    })
+    .catch((error) => {
+      console.error("Error checking user vote:", error);
+      return false;
+    });
 };
 
 export const resetVote = (content) => {
   const contentKey = encodeURIComponent(content).replace(/\./g, "%2E");
   const voteRef = ref(database, `votes/${contentKey}`);
+  const userVotesRef = ref(database, `userVotes/${contentKey}`);
+
+  // Clear all user votes for this content
+  set(userVotesRef, null);
+
   return update(voteRef, {
     count: 0,
     lastUpdated: Date.now(),

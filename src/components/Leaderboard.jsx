@@ -1,6 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import React, { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import config from "../config.json";
+import { hasUserVotedForMessage } from "../firebase";
 
 const Leaderboard = ({
   votes,
@@ -8,9 +9,13 @@ const Leaderboard = ({
   standalone = false,
   onVote,
   dateKey,
+  currentUserId,
 }) => {
   // Use leaderboardSize from config instead of hardcoded value
   const leaderboardSize = config.leaderboardSize || 10;
+
+  // Track which messages the user has voted for
+  const [userVotes, setUserVotes] = useState({});
 
   // Load saved votes from localStorage on component mount
   useEffect(() => {
@@ -40,20 +45,65 @@ const Leaderboard = ({
     }
   }, [votes]);
 
-  // Sort messages by vote count, descending
-  const sortedVotes = Object.entries(votes || {})
-    .sort((a, b) => b[1] - a[1])
+  // Get top N messages by vote count
+  const topMessages = messages
+    .filter((message) => {
+      // Only include vote type messages
+      if (message.type !== "vote") return false;
+
+      // Filter by date if a dateKey is provided
+      if (dateKey && message.dateKey) {
+        return message.dateKey === dateKey;
+      }
+      return true;
+    })
+    .map((message) => {
+      // Get the actual vote count from the votes object
+      const voteCount =
+        message.content && votes[message.content] ? votes[message.content] : 0;
+      return { ...message, voteCount };
+    })
+    .sort((a, b) => b.voteCount - a.voteCount)
     .slice(0, leaderboardSize);
 
-  // Find message details for each vote
-  const topMessages = sortedVotes
-    .map(([content, count]) => {
-      const message = messages.find(
-        (msg) => msg.type === "vote" && msg.content === content
-      );
-      return message ? { ...message, voteCount: count } : null;
-    })
-    .filter(Boolean);
+  // Check which messages the user has voted for
+  useEffect(() => {
+    if (currentUserId && topMessages.length > 0) {
+      // Create a temporary object to store vote status
+      const voteStatus = {};
+
+      // Create a promise for each message to check
+      const checkPromises = topMessages.map((message) => {
+        return hasUserVotedForMessage(message.content, currentUserId)
+          .then((hasVoted) => {
+            voteStatus[message.id] = hasVoted;
+          })
+          .catch((error) => {
+            console.error(
+              `Error checking vote for message ${message.id}:`,
+              error
+            );
+            voteStatus[message.id] = false;
+          });
+      });
+
+      // When all promises resolve, update the state
+      Promise.all(checkPromises).then(() => {
+        setUserVotes(voteStatus);
+      });
+    }
+  }, [topMessages, currentUserId]);
+
+  const handleVote = (messageId, content) => {
+    if (!userVotes[messageId] && onVote) {
+      onVote(messageId, content);
+      // Optimistically update the vote status
+      setUserVotes((prev) => ({
+        ...prev,
+        [messageId]: true,
+      }));
+    }
+  };
 
   // Classes for standalone mode
   const containerClasses = standalone
@@ -66,43 +116,55 @@ const Leaderboard = ({
       <div className="leaderboard-content">
         {topMessages.length > 0 ? (
           <div className="leaderboard-items">
-            {topMessages.map((message, index) => (
-              <div key={message.id} className="leaderboard-item">
-                <div className="leaderboard-item-header">
-                  <div className="leaderboard-rank">{index + 1}</div>
-                  <div className="leaderboard-votes">
-                    <button
-                      className="vote-button"
-                      onClick={() =>
-                        onVote && onVote(message.id, message.content)
-                      }
-                      aria-label="Upvote message"
-                    >
-                      ▲
-                    </button>
-                    <span className="vote-count">{message.voteCount}</span>
-                    <span className="vote-text">Vote +1</span>
-                  </div>
-                </div>
+            {topMessages.map((message, index) => {
+              const hasVoted = userVotes[message.id] || false;
+              const voteButtonClasses = `vote-button ${
+                hasVoted ? "voted" : ""
+              }`;
+              const voteTextContent = hasVoted ? "Voted" : "Vote +1";
 
-                <div className="leaderboard-message">
-                  <div className="leaderboard-content" title={message.content}>
-                    {message.content}
+              return (
+                <div key={message.id} className="leaderboard-item">
+                  <div className="leaderboard-item-header">
+                    <div className="leaderboard-rank">{index + 1}</div>
+                    <div
+                      className={`leaderboard-votes ${hasVoted ? "voted" : ""}`}
+                    >
+                      <button
+                        className={voteButtonClasses}
+                        onClick={() => handleVote(message.id, message.content)}
+                        aria-label="Upvote message"
+                        disabled={hasVoted}
+                      >
+                        ▲
+                      </button>
+                      <span className="vote-count">{message.voteCount}</span>
+                      <span className="vote-text">{voteTextContent}</span>
+                    </div>
                   </div>
-                  <div className="leaderboard-details">
-                    <span className="leaderboard-user">
-                      {message.displayName}
-                    </span>
-                    {message.bits && (
-                      <span className="bits-badge">{message.bits} bits</span>
-                    )}
-                    <span className="leaderboard-timestamp">
-                      {message.timestamp}
-                    </span>
+
+                  <div className="leaderboard-message">
+                    <div
+                      className="leaderboard-content"
+                      title={message.content}
+                    >
+                      {message.content}
+                    </div>
+                    <div className="leaderboard-details">
+                      <span className="leaderboard-user">
+                        {message.displayName}
+                      </span>
+                      {message.bits && (
+                        <span className="bits-badge">{message.bits} bits</span>
+                      )}
+                      <span className="leaderboard-timestamp">
+                        {message.timestamp}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="leaderboard-empty">

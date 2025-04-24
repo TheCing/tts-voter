@@ -12,6 +12,7 @@ const MessageBoard = ({
   onResetVote,
   standalone = false,
   dateKey,
+  currentUserId,
 }) => {
   const messagesEndRef = useRef(null);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -120,6 +121,7 @@ const MessageBoard = ({
                 votes={votes}
                 onVote={onVote}
                 onResetVote={onResetVote}
+                currentUserId={currentUserId}
               />
             ))}
             <div ref={messagesEndRef} />

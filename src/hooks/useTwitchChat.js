@@ -36,6 +36,9 @@ const useTwitchChat = () => {
   const votesListenerCleanup = useRef(null);
   const messagesListenerCleanup = useRef(null);
 
+  // Add current user ID state
+  const [currentUserId, setCurrentUserId] = useState(null);
+
   // Add message to debug log
   const addDebugMessage = useCallback((message) => {
     console.log(`[TwitchChat] ${message}`);
@@ -245,24 +248,46 @@ const useTwitchChat = () => {
     setMessages([]);
   }, [addDebugMessage]);
 
+  // Set up a user ID if needed
+  useEffect(() => {
+    // Check if we have a stored user ID
+    let userId = localStorage.getItem("tts-voter-user-id");
+
+    // If not, create one
+    if (!userId) {
+      userId =
+        "user_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem("tts-voter-user-id", userId);
+    }
+
+    setCurrentUserId(userId);
+    addDebugMessage(`User ID set: ${userId}`);
+  }, []);
+
   // Manually upvote a message
   const upvoteMessage = useCallback(
     (messageId, content) => {
       addDebugMessage(`Manual upvote for message id: ${messageId}`);
 
-      // Update Firebase vote
-      incrementVote(content)
+      // Update Firebase vote with user ID
+      incrementVote(content, currentUserId)
         .then(() => {
           addDebugMessage(`Vote incremented in Firebase for: ${content}`);
         })
         .catch((error) => {
           console.error("Error incrementing vote:", error);
           addDebugMessage(`Error incrementing vote: ${error.message}`);
+
+          // Alert the user if they've already voted
+          if (error.message === "User has already voted for this message") {
+            // We could display a toast or notification here
+            addDebugMessage("You can only vote once per message");
+          }
         });
 
       // Local message display is handled by Firebase listener
     },
-    [addDebugMessage]
+    [addDebugMessage, currentUserId]
   );
 
   // Reset vote count to zero
@@ -449,6 +474,7 @@ const useTwitchChat = () => {
     filterByDate, // Expose the date filter function
     currentDateKey, // Expose the current date key
     config, // Expose the config object
+    currentUserId, // Expose the current user ID
   };
 };
 

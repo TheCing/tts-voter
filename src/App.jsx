@@ -24,6 +24,7 @@ function App() {
     resetVoteMessage,
     filterByDate,
     channel,
+    currentUserId,
   } = useTwitchChat();
 
   // Handle date change from DateHeader
@@ -147,6 +148,7 @@ function App() {
           onVote={upvoteMessage}
           onResetVote={resetVoteMessage}
           dateKey={selectedDateKey}
+          currentUserId={currentUserId}
         />
         <Footer />
       </>
@@ -162,6 +164,7 @@ function App() {
           standalone={true}
           onVote={upvoteMessage}
           dateKey={selectedDateKey}
+          currentUserId={currentUserId}
         />
         <Footer />
       </>
@@ -178,6 +181,7 @@ function App() {
           messages={messages}
           onVote={upvoteMessage}
           dateKey={selectedDateKey}
+          currentUserId={currentUserId}
         />
         {isDev && showDebug && <FirebaseDebug />}
       </div>
@@ -190,6 +194,7 @@ function App() {
           onVote={upvoteMessage}
           onResetVote={resetVoteMessage}
           dateKey={selectedDateKey}
+          currentUserId={currentUserId}
         />
         {isDev && showDebug && (
           <div style={{ textAlign: "center", marginTop: "10px" }}>
