@@ -2,7 +2,7 @@
  * Twitch API token refresh script for Vercel deployments
  *
  * Set up as a scheduled task in Vercel to run periodically
- * (recommended every 12 hours to avoid token expiration)
+ * (runs once daily at midnight to avoid token expiration)
  */
 
 import fetch from "node-fetch";

@@ -186,7 +186,7 @@ This project is designed to be deployed on Vercel:
    - `VERCEL_TEAM_ID`: (Optional) Your team ID if using a team account
    - `REFRESH_SECRET`: A random string for securing the token refresh endpoint
    - `VITE_TWITCH_ACCESS_TOKEN`: Your Twitch access token (must be refreshed manually)
-5. The automatic token refresh reminder will run every 12 hours
+5. The automatic token refresh reminder will run once daily
 
 ### Twitch Token Manual Update (For Public Apps)
 

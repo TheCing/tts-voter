@@ -1,7 +1,7 @@
 /**
  * Vercel Serverless Function to refresh the Twitch API token
  * To be triggered by Vercel Cron Job (see vercel.json)
- * Runs every 12 hours to ensure token doesn't expire
+ * Runs once daily at midnight to ensure token doesn't expire
  */
 
 import refreshTwitchToken from "../scripts/refresh-twitch-token.js";
