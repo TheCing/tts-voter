@@ -1062,3 +1062,11 @@ input:checked + .toggle-slider:before {
   color: var(--secondary);
   text-decoration: underline;
 }
+
+.discord-link {
+  color: #5865f2;
+}
+
+.discord-link:hover {
+  color: #7289da !important;
+}
