@@ -6,7 +6,10 @@ import {
   setupVotesListener,
   setupMessagesListener,
   incrementVote,
+  resetVote,
   addMessage,
+  formatDateKey,
+  getTodayDateKey,
 } from "../firebase";
 
 const useTwitchChat = () => {
@@ -26,6 +29,13 @@ const useTwitchChat = () => {
   const [debug, setDebug] = useState([]); // Debug log array
   const shouldAutoConnect = useRef(config.autoConnect);
 
+  // Current date filter (default to today)
+  const [currentDateKey, setCurrentDateKey] = useState(getTodayDateKey());
+
+  // Cleanup functions for Firebase listeners
+  const votesListenerCleanup = useRef(null);
+  const messagesListenerCleanup = useRef(null);
+
   // Add message to debug log
   const addDebugMessage = useCallback((message) => {
     console.log(`[TwitchChat] ${message}`);
@@ -35,32 +45,74 @@ const useTwitchChat = () => {
     ]);
   }, []);
 
+  // Function to filter data by date
+  const filterByDate = useCallback(
+    (dateKey) => {
+      addDebugMessage(`Filtering by date: ${dateKey}`);
+      setCurrentDateKey(dateKey);
+
+      // Clean up existing listeners
+      if (votesListenerCleanup.current) {
+        votesListenerCleanup.current();
+      }
+      if (messagesListenerCleanup.current) {
+        messagesListenerCleanup.current();
+      }
+
+      // Set up new listeners with the date filter
+      votesListenerCleanup.current = setupVotesListener((updatedVotes) => {
+        setVotes(updatedVotes);
+        addDebugMessage(
+          `Received ${
+            Object.keys(updatedVotes).length
+          } votes for date ${dateKey}`
+        );
+      }, dateKey);
+
+      messagesListenerCleanup.current = setupMessagesListener(
+        (updatedMessages) => {
+          setMessages(updatedMessages);
+          addDebugMessage(
+            `Received ${updatedMessages.length} messages for date ${dateKey}`
+          );
+        },
+        dateKey
+      );
+    },
+    [addDebugMessage]
+  );
+
   // Setup Firebase listeners
   useEffect(() => {
     addDebugMessage("Setting up Firebase listeners");
 
     // Set up votes listener
-    const unsubscribeVotes = setupVotesListener((updatedVotes) => {
+    votesListenerCleanup.current = setupVotesListener((updatedVotes) => {
       setVotes(updatedVotes);
       addDebugMessage(
         `Received ${Object.keys(updatedVotes).length} votes from Firebase`
       );
-    });
+    }, currentDateKey);
 
     // Set up messages listener
-    const unsubscribeMessages = setupMessagesListener((updatedMessages) => {
-      if (updatedMessages.length > 0 && messages.length === 0) {
+    messagesListenerCleanup.current = setupMessagesListener(
+      (updatedMessages) => {
         setMessages(updatedMessages);
         addDebugMessage(
           `Received ${updatedMessages.length} messages from Firebase`
         );
-      }
-    });
+      },
+      currentDateKey
+    );
 
     // Cleanup listeners on unmount
     return () => {
-      unsubscribeVotes();
-      unsubscribeMessages();
+      if (votesListenerCleanup.current) {
+        votesListenerCleanup.current();
+      }
+      if (messagesListenerCleanup.current) {
+        messagesListenerCleanup.current();
+      }
       addDebugMessage("Firebase listeners cleaned up");
     };
   }, []);
@@ -112,7 +164,24 @@ const useTwitchChat = () => {
       shouldAutoConnect.current = config.autoConnect;
       addDebugMessage(`Using config autoconnect: ${config.autoConnect}`);
     }
-  }, [addDebugMessage, channel, trackingMode, username]);
+
+    // Check for date parameter
+    const dateParam = params.get("date");
+    if (dateParam) {
+      try {
+        const parsedDate = new Date(dateParam);
+        if (!isNaN(parsedDate.getTime())) {
+          const dateKey = formatDateKey(parsedDate);
+          setCurrentDateKey(dateKey);
+          addDebugMessage(`Date override from URL: ${dateKey}`);
+          // Re-initialize Firebase listeners with the new date
+          filterByDate(dateKey);
+        }
+      } catch (error) {
+        console.error("Invalid date parameter:", error);
+      }
+    }
+  }, [addDebugMessage, channel, trackingMode, username, filterByDate]);
 
   // Connect to Twitch chat
   const connectToChat = useCallback(() => {
@@ -189,6 +258,26 @@ const useTwitchChat = () => {
         .catch((error) => {
           console.error("Error incrementing vote:", error);
           addDebugMessage(`Error incrementing vote: ${error.message}`);
+        });
+
+      // Local message display is handled by Firebase listener
+    },
+    [addDebugMessage]
+  );
+
+  // Reset vote count to zero
+  const resetVoteMessage = useCallback(
+    (messageId, content) => {
+      addDebugMessage(`Reset vote for message id: ${messageId}`);
+
+      // Reset vote in Firebase
+      resetVote(content)
+        .then(() => {
+          addDebugMessage(`Vote reset to zero in Firebase for: ${content}`);
+        })
+        .catch((error) => {
+          console.error("Error resetting vote:", error);
+          addDebugMessage(`Error resetting vote: ${error.message}`);
         });
 
       // Local message display is handled by Firebase listener
@@ -313,7 +402,6 @@ const useTwitchChat = () => {
           content: voteContent,
           timestamp: new Date().toLocaleTimeString(),
           type: "vote",
-          voteCount: 1, // Initial vote count, will be updated by Firebase
           bits: tags.bits,
         };
 
@@ -357,6 +445,9 @@ const useTwitchChat = () => {
     disconnectFromChat,
     clearBoard,
     upvoteMessage,
+    resetVoteMessage,
+    filterByDate, // Expose the date filter function
+    currentDateKey, // Expose the current date key
     config, // Expose the config object
   };
 };
