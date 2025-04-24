@@ -6,7 +6,7 @@ const Footer = () => {
       <p className="copyright-text">
         ©️{" "}
         <a
-          href="https://discord.com/users/YOUR_DISCORD_ID"
+          href="https://discord.com/users/150462408505294848D"
           target="_blank"
           rel="noopener noreferrer"
           className="discord-link"
